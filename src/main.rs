@@ -1,28 +1,29 @@
+// -----------------------------------------
+//
+//  My own implementation of Lox interpreter
+//  from the book "Crafting Interpreters" by
+//  Robert Nystrom.
+//
+// -----------------------------------------
 mod utils;
 
-use std::env;
-// use std::io;
-use utils::{handle_err, Error};
+use krinjc::{run_from_file, run_promting, CError};
+use std::env::args;
+use utils::handle_err;
 
-fn run_interpreter() -> Result<(), Error> {
-    let input: Vec<String> = env::args().collect();
+fn run_interpreter() -> Result<(), CError> {
+    let args: Vec<String> = args().collect();
 
-    match input.len() {
-        1 => println!("Prompt executing"),
-        2 => println!("Compiling file"),
-        _ => {
-            return Err(Error::InputError(
-                "Incorrect number of arguements!".to_string(),
-            ))
-        }
+    match args.len() {
+        1 => run_promting(),
+        2 => run_from_file(&args[1].clone()),
+        _ => return Err(CError::Input("Incorrect number of arguements!".to_string())),
     }
-
-    Ok(())
 }
 
 fn main() {
     match run_interpreter() {
         Ok(()) => {}
         Err(err) => handle_err(err),
-    };
+    }
 }
