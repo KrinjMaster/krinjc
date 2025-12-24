@@ -1,7 +1,9 @@
 use std::error::Error;
+use std::ffi::OsStr;
 use std::fmt;
 use std::fs::File;
 use std::io::{BufReader, Read};
+use std::path::Path;
 
 // CError - custom error handling
 #[derive(Debug)]
@@ -76,6 +78,10 @@ pub fn run(source: &str) -> Result<(), CError> {
     let scanner = Scanner { source: source };
     let tokens = scanner.scan_tokens();
 
+    if tokens.len() == 0 {
+        return Err(CError::Compile("Empty source code".to_string()));
+    }
+
     for token in tokens {
         println!("Token: {}", token.a);
     }
@@ -84,10 +90,25 @@ pub fn run(source: &str) -> Result<(), CError> {
 }
 
 pub fn run_from_file(path: &str) -> Result<(), CError> {
-    let file = File::open(path).ctx("Failed to open file")?;
+    let file_path = Path::new(path);
 
-    if file.metadata().ctx("Failed to read metadata")?.is_dir() {
+    let file = File::open(file_path).ctx("Failed to open file")?;
+
+    if file
+        .metadata()
+        .ctx("Failed to read metadata of the file")?
+        .is_dir()
+    {
         return Err(CError::Input("Path is a directory".into()));
+    }
+
+    match file_path.extension().and_then(OsStr::to_str).unwrap_or("") {
+        "krj" => {}
+        _ => {
+            return Err(CError::Input(
+                "Incorrect or emtpy file extension, use `.krj`".to_string(),
+            ))
+        }
     }
 
     let mut file_code = String::new();
