@@ -21,7 +21,7 @@ fn run_interpreter(arguements: Option<&[String]>) -> Result<(), CError> {
     match arges.len() {
         1 => run_promting(),
         2 => run_from_file(&arges[1].clone()),
-        _ => return Err(CError::Input("Incorrect number of arguements".to_string())),
+        _ => return Err(CError::Input(format!("Incorrect number of arguements"))),
     }
 }
 

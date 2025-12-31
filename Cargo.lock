@@ -3,5 +3,14 @@
 version = 3
 
 [[package]]
+name = "colored_text"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a62f25f939069d43c25a069fde8e1dcfee5f0aaaaaee12a89f49adb9b68ac08f"
+
+[[package]]
 name = "krinjc"
 version = "0.1.0"
+dependencies = [
+ "colored_text",
+]

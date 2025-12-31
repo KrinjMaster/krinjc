@@ -2,7 +2,7 @@ use krinjc::*;
 
 use crate::run_interpreter;
 
-// incorrect number of args
+// incorrect number of arguements
 #[test]
 fn number_of_args() {
     match run_interpreter(Some(&vec![
@@ -71,6 +71,20 @@ fn empty_file() {
     ])) {
         Err(CError::Compile(message)) => {
             assert_eq!(message, "Empty source code".to_string());
+        }
+        _ => panic!("Incorrect error message!"),
+    }
+}
+
+// correct file with compile token error
+#[test]
+fn incorrect_token() {
+    match run_interpreter(Some(&vec![
+        "run".to_string(),
+        "./src/test/incorrect_token.krj".to_string(),
+    ])) {
+        Err(CError::Compile(_)) => {
+            assert!(true);
         }
         _ => panic!("Incorrect error message!"),
     }

@@ -2,3 +2,6 @@
 name = "krinjc"
 version = "0.1.0"
 edition = "2021"
+
+[dependencies]
+colored_text = "0.3.0"
