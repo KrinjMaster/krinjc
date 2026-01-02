@@ -26,48 +26,48 @@ enum Literal {
 #[derive(Debug)]
 enum TokenType {
     // Single-character tokens.
-    LEFT_PAREN,
-    RIGHT_PAREN,
-    LEFT_BRACE,
-    RIGHT_BRACE,
-    COMMA,
-    DOT,
-    MINUS,
-    PLUS,
-    SEMICOLON,
-    SLASH,
-    STAR,
+    LeftParen,
+    RightParen,
+    LeftBrace,
+    RightBrace,
+    Comma,
+    Dot,
+    Minus,
+    Plus,
+    Semicolon,
+    Slash,
+    Star,
     // One or two character tokens.
-    BANG,
-    BANG_EQUAL,
-    EQUAL,
-    EQUAL_EQUAL,
-    GREATER,
-    GREATER_EQUAL,
-    LESS,
-    LESS_EQUAL,
+    Bang,
+    BangEqual,
+    Equal,
+    EqualEqual,
+    Greater,
+    GreaterEqual,
+    Less,
+    LessEqual,
     // Literals.
-    IDENTIFIER,
-    STRING,
-    NUMBER,
+    Identifier,
+    String,
+    Number,
     // Keywords.
-    AND,
-    CLASS,
-    ELSE,
-    FALSE,
-    FUN,
-    FOR,
-    IF,
-    NIL,
-    OR,
-    PRINT,
-    RETURN,
-    SUPER,
-    THIS,
-    TRUE,
-    VAR,
-    WHILE,
-    EOF,
+    And,
+    Class,
+    Else,
+    False,
+    Fun,
+    For,
+    If,
+    Nil,
+    Or,
+    Print,
+    Return,
+    Super,
+    This,
+    True,
+    Var,
+    While,
+    Eof,
 }
 
 impl fmt::Display for CError {
@@ -108,6 +108,7 @@ where
 }
 
 // Token initialization
+#[derive(Debug)]
 struct Token {
     token_type: TokenType,
     lexeme: String,
@@ -115,12 +116,12 @@ struct Token {
 }
 
 impl Token {
-    fn to_string(&self) -> String {
-        format!(
-            "type: {:?}, lexeme: {}, literal: {:?}",
-            self.token_type, self.lexeme, self.literal
-        )
-    }
+    // fn to_string(&self) -> String {
+    //     format!(
+    //         "type: {:?}, lexeme: {}, literal: {:?}",
+    //         self.token_type, self.lexeme, self.literal
+    //     )
+    // }
 }
 
 struct Scanner<'a> {
@@ -131,6 +132,22 @@ struct Scanner<'a> {
     current: u32,
     line_count: u32,
     column_count: u32,
+    diagnostics: Diagnostics,
+}
+
+#[derive(Debug)]
+pub struct Diagnostics {
+    pub errors: Vec<CError>,
+}
+
+impl Diagnostics {
+    pub fn has_errors(&self) -> bool {
+        !self.errors.is_empty()
+    }
+
+    pub fn push_error(&mut self, error: CError) {
+        self.errors.push(error);
+    }
 }
 
 impl<'a> Scanner<'a> {
@@ -143,54 +160,170 @@ impl<'a> Scanner<'a> {
             current: 0,
             line_count: 1,
             column_count: 1,
+            diagnostics: Diagnostics { errors: vec![] },
         }
     }
 
-    fn scan_tokens(&mut self) -> Result<(), CError> {
-        for line in self.source.lines() {
-            for c in line.chars() {
-                match c {
-                    '(' => self.add_token(TokenType::LEFT_PAREN, None),
-                    ')' => self.add_token(TokenType::RIGHT_PAREN, None),
-                    '}' => self.add_token(TokenType::LEFT_BRACE, None),
-                    '{' => self.add_token(TokenType::RIGHT_BRACE, None),
-                    ',' => self.add_token(TokenType::COMMA, None),
-                    '.' => self.add_token(TokenType::DOT, None),
-                    '-' => self.add_token(TokenType::MINUS, None),
-                    '+' => self.add_token(TokenType::PLUS, None),
-                    ';' => self.add_token(TokenType::SEMICOLON, None),
-                    '*' => self.add_token(TokenType::STAR, None),
-                    _ => {
-                        return Err(CError::Compile(self.get_error_message(c, line)));
+    fn scan_tokens(&mut self) {
+        while !self.is_at_end() {
+            let c = self.advance();
+
+            match c {
+                '(' => self.add_token(TokenType::LeftParen, None),
+                ')' => self.add_token(TokenType::RightParen, None),
+                '}' => self.add_token(TokenType::LeftBrace, None),
+                '{' => self.add_token(TokenType::RightBrace, None),
+                ',' => self.add_token(TokenType::Comma, None),
+                '.' => self.add_token(TokenType::Dot, None),
+                '-' => self.add_token(TokenType::Minus, None),
+                '+' => self.add_token(TokenType::Plus, None),
+                ';' => self.add_token(TokenType::Semicolon, None),
+                '*' => self.add_token(TokenType::Star, None),
+                '!' => {
+                    if self.check_next('=') {
+                        self.current += 1;
+                        self.add_token(TokenType::BangEqual, None);
+                    } else {
+                        self.add_token(TokenType::Bang, None)
                     }
                 }
-                self.column_count += 1;
+                '=' => {
+                    if self.check_next('=') {
+                        self.current += 1;
+                        self.add_token(TokenType::EqualEqual, None);
+                    } else {
+                        self.add_token(TokenType::Equal, None);
+                    }
+                }
+                '<' => {
+                    if self.check_next('=') {
+                        self.current += 1;
+                        self.add_token(TokenType::LessEqual, None);
+                    } else {
+                        self.add_token(TokenType::Less, None);
+                    }
+                }
+                '>' => {
+                    if self.check_next('=') {
+                        self.current += 1;
+                        self.add_token(TokenType::GreaterEqual, None);
+                    } else {
+                        self.add_token(TokenType::Greater, None);
+                    }
+                }
+                '/' => {
+                    if self.check_next('/') {
+                        while !self.check_next('\n') && !self.is_at_end() {
+                            self.advance();
+                        }
+                    } else {
+                        self.add_token(TokenType::Slash, None);
+                    }
+                }
+                '\"' => {
+                    self.start += 1;
+                    while !self.is_at_end() && !self.check_next('"') {
+                        self.current += 1;
+
+                        if self.check_next('"') {
+                            return self.add_token(
+                                TokenType::String,
+                                Some(Literal::String(
+                                    self.source[self.start as usize..self.current as usize]
+                                        .to_string(),
+                                )),
+                            );
+                        }
+                    }
+
+                    if self.is_at_end() {
+                        self.diagnostics.push_error(CError::Compile(
+                            self.get_error_message(format!("Unterminated string")),
+                        ));
+                    }
+                }
+                '\n' => {
+                    self.line_count += 1;
+                    self.column_count = 1;
+                }
+                '\t' => {
+                    self.column_count += 1;
+                }
+                '\r' => {
+                    self.column_count += 1;
+                }
+                ' ' => {
+                    self.column_count += 1;
+                }
+                _ => {
+                    self.diagnostics.push_error(CError::Compile(
+                        self.get_error_message(format!("Unexpected character: `{}`", c)),
+                    ));
+                }
             }
-            self.line_count += 1;
-            self.column_count = 1;
+
+            self.start = self.current;
         }
 
-        self.add_token(TokenType::EOF, None);
-        Ok(())
+        self.add_token(TokenType::Eof, None);
     }
 
-    fn get_error_message(&self, incorrect_char: char, line: &str) -> String {
-        let error_pointer: String = " ".repeat(self.column_count as usize - 1) + "^";
+    fn check_next(&self, expected: char) -> bool {
+        if self.current < self.source.len() as u32 {
+            return self.source.chars().nth(self.current as usize) == Some(expected);
+        }
+
+        false
+    }
+
+    fn is_at_end(&self) -> bool {
+        self.current >= self.source.len() as u32
+    }
+
+    fn advance(&mut self) -> char {
+        let c = self.source.chars().nth(self.current as usize).unwrap();
+        self.current += 1;
+        self.column_count += 1;
+        c
+    }
+
+    fn get_error_message(&self, message: String) -> String {
+        let line_no = self.line_count;
+        let line_no_colored = line_no.to_string().blue().bold();
+        let line = self
+            .source
+            .lines()
+            .nth((line_no - 1) as usize)
+            .unwrap()
+            .to_string();
+        let col_no = self.column_count;
+
+        let width = line_no.to_string().len();
+        let gutter_pad = " ".repeat(width);
+
+        let arrow = "   -->".blue().bold();
+        let gutter = "|".blue().bold();
+
+        let file = self.filepath.replacen("./", ".../", 1);
+        let pointer = format!("{:>width$}^", "", width = col_no as usize)
+            .red()
+            .bold();
+
         format!(
-            "Unexpected character `{}`\n   {}{}:{}:{}\n\n{}{}\n{}{}{}\n{}{}{}",
-            incorrect_char,
-            "--> ".blue(),
-            self.filepath.replacen("./", ".../", 1),
-            self.line_count,
-            self.column_count,
-            " ".repeat(self.line_count as usize),
-            "|".blue().bold(),
-            self.line_count.blue().bold(),
-            " | ".blue().bold(),
-            line,
-            " ".repeat(self.line_count as usize),
-            "| ".blue().bold(),
-            error_pointer.bold().red()
+            "{message}\n\
+            {arrow} {file}:{line}:{col}\n\
+            \n\
+            {gutter_pad} {gutter}\n\
+            {line_no_colored:>width$} {gutter} {src}\n\
+            {gutter_pad} {gutter}{pointer}",
+            arrow = arrow,
+            file = file,
+            line = line_no,
+            col = col_no,
+            gutter_pad = gutter_pad,
+            width = width,
+            src = line,
+            pointer = pointer,
         )
     }
 
@@ -205,18 +338,28 @@ impl<'a> Scanner<'a> {
     }
 }
 
-pub fn run(source: &str, filepath: &str) -> Result<(), CError> {
+pub fn run(source: &str, filepath: &str) -> Diagnostics {
     let mut scanner = Scanner::new(source, filepath);
-    let _ = scanner.scan_tokens()?;
+    let _ = scanner.scan_tokens();
 
     if scanner.tokens.len() == 1 {
-        return Err(CError::Compile(format!("Empty source code")));
+        return Diagnostics {
+            errors: vec![CError::Compile(format!("Empty source code"))],
+        };
     }
 
-    Ok(())
+    if scanner.diagnostics.has_errors() {
+        return scanner.diagnostics;
+    }
+
+    for token in &scanner.tokens {
+        println!("{:?}", token);
+    }
+
+    scanner.diagnostics
 }
 
-pub fn run_from_file(path: &str) -> Result<(), CError> {
+pub fn run_from_file(path: &str) -> Result<Diagnostics, CError> {
     let file_path = Path::new(path);
 
     let file = File::open(file_path).ctx("Failed to open file")?;
@@ -244,12 +387,12 @@ pub fn run_from_file(path: &str) -> Result<(), CError> {
         .read_to_string(&mut file_code)
         .ctx("Failed to read file contents")?;
 
-    run(&file_code, path)
+    Ok(run(&file_code, path))
 }
 
-pub fn run_promting() -> Result<(), CError> {
+pub fn run_promting() -> Result<Diagnostics, CError> {
     println!("Running from prompts!...");
     todo!("implement run_promting");
 
-    Ok(())
+    Ok(Diagnostics { errors: vec![] })
 }

@@ -1,8 +1,12 @@
 use colored_text::Colorize;
 use krinjc::CError;
 
-pub fn handle_err(err: CError) {
-    eprintln!("{} {}\n", "ERROR".red().bold(), err.bold());
+pub fn handle_errs(errors: Vec<CError>) {
+    for err in &errors {
+        eprintln!("{} {}\n", "ERROR".red().bold(), err.to_string().bold());
+    }
 
-    eprintln!("💡 {}", "run `jkrinjc --help` to view all commands".bold());
+    if !errors.is_empty() {
+        eprintln!("💡 {}", "run `krinjc --help` to view all commands".bold());
+    }
 }

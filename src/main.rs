@@ -1,3 +1,4 @@
+#![forbid(unsafe_code)]
 // -----------------------------------------
 //
 //  My own implementation of Lox interpreter
@@ -7,27 +8,33 @@
 // -----------------------------------------
 mod utils;
 
-use krinjc::{run_from_file, run_promting, CError};
+use krinjc::{run_from_file, run_promting, CError, Diagnostics};
 use std::env::args;
-use utils::handle_err;
+use utils::handle_errs;
 
 // added arguements for testing, see test.rs for more
-fn run_interpreter(arguements: Option<&[String]>) -> Result<(), CError> {
-    let arges = match arguements {
-        Some(a) => a,
-        None => &args().collect::<Vec<_>>(),
-    };
+fn run_interpreter(arguments: Option<Vec<String>>) -> Result<Diagnostics, CError> {
+    let args = arguments.unwrap_or_else(|| args().collect());
 
-    match arges.len() {
-        1 => run_promting(),
-        2 => run_from_file(&arges[1].clone()),
-        _ => return Err(CError::Input(format!("Incorrect number of arguements"))),
+    match args.len() {
+        1 => Ok(run_promting()?),
+        2 => run_from_file(&args[1]),
+        _ => Err(CError::Input(format!("Incorrect number of arguments"))),
     }
 }
 
 fn main() {
-    if let Err(err) = run_interpreter(None) {
-        handle_err(err);
+    match run_interpreter(None) {
+        Err(err) => {
+            handle_errs(vec![err]);
+            std::process::exit(1);
+        }
+        Ok(diag) => {
+            if diag.has_errors() {
+                handle_errs(diag.errors);
+                std::process::exit(65);
+            }
+        }
     }
 }
 
